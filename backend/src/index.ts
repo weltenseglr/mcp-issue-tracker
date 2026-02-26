@@ -4,6 +4,7 @@ import { auth } from "./auth.js";
 import usersRoute from "./routes/users.js";
 import tagsRoute from "./routes/tags.js";
 import issuesRoute from "./routes/issues.js";
+import schemaRoute from "./routes/schema.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import {
   healthCheckHandler,
@@ -21,12 +22,19 @@ export async function buildApp(
   // Add skipAuth flag to app context for routes to check
   (fastify as any).skipAuth = options.skipAuth;
 
+  const baseUrl = process.env.BETTER_AUTH_BASE_URL || "http://localhost:3000";
+
   // Register error handler first
   fastify.setErrorHandler(errorHandler);
 
+  // CORS origins: env-var driven for container deployment, defaults preserve local dev
+  const allowedOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(",").map((s) => s.trim())
+    : ["http://localhost:5173", "http://localhost:5174"];
+
   // Register CORS
   await fastify.register(cors, {
-    origin: ["http://localhost:5173", "http://localhost:5174"], // Vite dev server
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
@@ -40,7 +48,7 @@ export async function buildApp(
         try {
           // First, create the user through Better Auth
           const authRequest = new Request(
-            `http://localhost:3000/api/auth/sign-up/email`,
+            `${baseUrl}/api/auth/sign-up/email`,
             {
               method: "POST",
               headers: {
@@ -127,7 +135,7 @@ export async function buildApp(
         try {
           // Get the session to verify user is authenticated
           const authRequest = new Request(
-            `http://localhost:3000/api/auth/get-session`,
+            `${baseUrl}/api/auth/get-session`,
             {
               method: "GET",
               headers: {
@@ -215,7 +223,7 @@ export async function buildApp(
       fastify.all("/*", async (request, reply) => {
         try {
           // Construct the full URL
-          const testUrl = `http://localhost:3000${request.url}`;
+          const testUrl = `${baseUrl}${request.url}`;
 
           // Convert Fastify headers to Headers object
           const headers = new Headers();
@@ -282,6 +290,7 @@ export async function buildApp(
     fastify.register(usersRoute, { prefix: "/api/users" });
     fastify.register(tagsRoute, { prefix: "/api/tags" });
     fastify.register(issuesRoute, { prefix: "/api/issues" });
+    fastify.register(schemaRoute, { prefix: "/api/schema" });
   });
 
   // Health check endpoints (no rate limiting)

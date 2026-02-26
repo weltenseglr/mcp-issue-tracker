@@ -6,21 +6,33 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Create the database connection with correct path
-const dbPath = path.resolve(__dirname, "..", "database.sqlite");
+// Create the database connection — use DATABASE_PATH env var if set (for containers),
+// otherwise fall back to the default path relative to the source tree
+const dbPath = process.env.DATABASE_PATH
+  ? path.resolve(process.env.DATABASE_PATH)
+  : path.resolve(__dirname, "..", "database.sqlite");
 const db = new Database(dbPath);
+
+const baseUrl = process.env.BETTER_AUTH_BASE_URL || "http://localhost:3000";
+
+// Build trusted origins from env vars, with defaults for local dev
+const defaultOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:3000",
+];
+const envOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(",").map((s) => s.trim())
+  : [];
+const trustedOrigins = [...new Set([...defaultOrigins, ...envOrigins, baseUrl])];
 
 const authConfig = {
   database: db,
-  baseURL: "http://localhost:3000/api/auth",
+  baseURL: `${baseUrl}/api/auth`,
   emailAndPassword: {
     enabled: true,
   },
-  trustedOrigins: [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:3000",
-  ],
+  trustedOrigins,
   plugins: [
     apiKey({
       defaultPrefix: "issues_",
