@@ -10,13 +10,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 sqlite3.verbose();
 
 // Database file path - consistent with auth.ts
-const DB_PATH = path.resolve(__dirname, "..", "..", "database.sqlite");
+const DB_PATH = process.env.DATABASE_PATH
+  ? path.resolve(process.env.DATABASE_PATH)
+  : path.resolve(__dirname, "..", "..", "database.sqlite");
 
 export interface Database {
   run: (sql: string, params?: any[]) => Promise<sqlite3.RunResult>;
   get: (sql: string, params?: any[]) => Promise<any>;
   all: (sql: string, params?: any[]) => Promise<any[]>;
   close: () => Promise<void>;
+  exec: (sql: string) => Promise<void>;
 }
 
 export class DatabaseConnection {
@@ -25,6 +28,7 @@ export class DatabaseConnection {
   public get: (sql: string, params?: any[]) => Promise<any>;
   public all: (sql: string, params?: any[]) => Promise<any[]>;
   public close: () => Promise<void>;
+  public exec: (sql: string) => Promise<void>;
 
   constructor(db: sqlite3.Database) {
     this.db = db;
@@ -37,6 +41,19 @@ export class DatabaseConnection {
             reject(err);
           } else {
             resolve(this); // 'this' contains lastID, changes, etc.
+          }
+        });
+      });
+    };
+
+    // exec() runs all statements in a multi-statement SQL string
+    this.exec = (sql: string) => {
+      return new Promise((resolve, reject) => {
+        this.db.exec(sql, (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
           }
         });
       });
@@ -71,6 +88,19 @@ export async function runMigrations(): Promise<void> {
     // Enable foreign keys
     await db.run("PRAGMA foreign_keys = ON");
 
+    // Create migration tracking table if it doesn't exist
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS _migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Get already-applied migrations
+    const applied = await db.all("SELECT name FROM _migrations");
+    const appliedSet = new Set(applied.map((row: { name: string }) => row.name));
+
     const migrationsDir = path.join(__dirname, "migrations");
     const migrationFiles = fs
       .readdirSync(migrationsDir)
@@ -82,13 +112,30 @@ export async function runMigrations(): Promise<void> {
     }
 
     for (const file of migrationFiles) {
+      if (appliedSet.has(file)) {
+        if (process.env.NODE_ENV !== "test") {
+          console.log(`Already applied: ${file}`);
+        }
+        continue;
+      }
+
       const filePath = path.join(migrationsDir, file);
-      const sql = fs.readFileSync(filePath, "utf8");
+      const sql = fs.readFileSync(filePath, "utf8").trim();
+
+      if (!sql) {
+        if (process.env.NODE_ENV !== "test") {
+          console.log(`Skipping empty migration: ${file}`);
+        }
+        // Track empty migrations so they aren't re-evaluated
+        await db.run("INSERT INTO _migrations (name) VALUES (?)", [file]);
+        continue;
+      }
 
       if (process.env.NODE_ENV !== "test") {
         console.log(`Running migration: ${file}`);
       }
-      await db.run(sql);
+      await db.exec(sql);
+      await db.run("INSERT INTO _migrations (name) VALUES (?)", [file]);
     }
 
     if (process.env.NODE_ENV !== "test") {

@@ -11,26 +11,34 @@ export function ApiKeyCopyButton() {
 
   const handleCopyApiKey = async () => {
     if (loading) return;
-    
+
     setLoading(true);
-    
+
     try {
-      // Generate a new API key (this invalidates previous keys)
-      const response = await authApi.generateNewApiKey();
-      
-      if (!response.success || !response.apiKey?.key) {
-        throw new Error("Failed to generate API key");
-      }
-
-      const apiKey = response.apiKey.key;
-
-      // Copy to clipboard
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(apiKey);
+      if (navigator.clipboard && window.ClipboardItem) {
+        // Safari requires clipboard writes to be initiated synchronously within a
+        // user gesture. Passing a Promise as ClipboardItem data keeps the gesture
+        // context alive while the fetch resolves, so Safari accepts the write.
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/plain": authApi.generateNewApiKey().then((response) => {
+              if (!response.success || !response.apiKey?.key) {
+                throw new Error("Failed to generate API key");
+              }
+              return new Blob([response.apiKey.key], { type: "text/plain" });
+            })
+          })
+        ]);
       } else {
-        // Fallback for older browsers
+        // Fallback for older browsers without the Clipboard API
+        const response = await authApi.generateNewApiKey();
+
+        if (!response.success || !response.apiKey?.key) {
+          throw new Error("Failed to generate API key");
+        }
+
         const textArea = document.createElement("textarea");
-        textArea.value = apiKey;
+        textArea.value = response.apiKey.key;
         textArea.style.position = "fixed";
         textArea.style.left = "-999999px";
         textArea.style.top = "-999999px";
@@ -43,7 +51,7 @@ export function ApiKeyCopyButton() {
 
       setCopied(true);
       toast.success("New API key copied to clipboard!");
-      
+
       // Reset the copied state after 2 seconds
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {

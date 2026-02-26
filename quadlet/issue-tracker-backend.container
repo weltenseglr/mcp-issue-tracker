@@ -1,0 +1,24 @@
+[Unit]
+Description=Issue Tracker Backend
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+ContainerName=backend
+Image=localhost/issue-tracker-backend:latest
+Network=issue-tracker.network
+PublishPort=3000:3000
+Volume=issue-tracker-db.volume:/data
+Environment=DATABASE_PATH=/data/database.sqlite
+Environment=NODE_ENV=production
+EnvironmentFile=%h/.config/issue-tracker/prod.env
+HealthCmd=wget -qO- http://localhost:3000/health/live
+HealthInterval=15s
+HealthRetries=3
+
+[Service]
+Restart=always
+TimeoutStartSec=60
+
+[Install]
+WantedBy=default.target
