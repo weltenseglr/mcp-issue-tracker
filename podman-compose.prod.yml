@@ -41,7 +41,7 @@ services:
       context: ./mcp
       dockerfile: Dockerfile
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
     environment:
       API_BASE_URL: http://backend:3000/api
       PORT: "4000"

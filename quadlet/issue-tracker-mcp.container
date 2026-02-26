@@ -7,7 +7,7 @@ Requires=issue-tracker-backend.service
 ContainerName=mcp
 Image=localhost/issue-tracker-mcp:latest
 Network=issue-tracker.network
-PublishPort=4000:4000
+PublishPort=127.0.0.1:4000:4000
 Environment=API_BASE_URL=http://backend:3000/api
 Environment=PORT=4000
 

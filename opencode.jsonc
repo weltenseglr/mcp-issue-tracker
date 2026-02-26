@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // Issue Tracker MCP Server (Streamable HTTP)
+  // Requires: podman-compose -f podman-compose.dev.yml up -d
+  "mcp": {
+    "issue-tracker": {
+      "type": "remote",
+      "url": "http://localhost:4000/mcp",
+      "oauth": false,
+      "enabled": true
+    },
+    // Fallback: enable this and disable issue-tracker if native remote doesn't work
+    "issue-tracker-fallback": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-remote", "http://localhost:4000/mcp", "--transport", "http-only"],
+      "enabled": false
+    }
+  }
+}
