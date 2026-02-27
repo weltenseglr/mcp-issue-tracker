@@ -1,0 +1,15 @@
+[Unit]
+Description=Issue Tracker Pod
+
+[Pod]
+PodName=issue-tracker
+Network=issue-tracker.network
+PublishPort=3000:3000
+PublishPort=8080:80
+PublishPort=127.0.0.1:4000:4000
+
+[Service]
+TimeoutStartSec=60
+
+[Install]
+WantedBy=default.target
