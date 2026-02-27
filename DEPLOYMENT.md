@@ -129,6 +129,8 @@ cd quadlet
 ```
 
 This copies unit files (including the shared `issue-tracker.network`) to `~/.config/containers/systemd/` and creates `~/.config/issue-tracker/prod.env` from the template. Containers use explicit `ContainerName=` directives (`backend`, `frontend`, `mcp`) for DNS resolution on the shared network — matching the same hostnames used in `podman-compose`.
+The deployment uses a .pod unit (issue-tracker.pod) for lifecycle management. This pod coordinates the backend, frontend, and MCP containers together.
+
 
 ### Configure
 
@@ -140,7 +142,8 @@ nano ~/.config/issue-tracker/prod.env
 ### Start services
 
 ```bash
-systemctl --user start issue-tracker-backend issue-tracker-frontend issue-tracker-mcp
+systemctl --user start issue-tracker-pod issue-tracker-backend issue-tracker-frontend issue-tracker-mcp
+
 ```
 
 ### Enable on boot
@@ -149,15 +152,20 @@ systemctl --user start issue-tracker-backend issue-tracker-frontend issue-tracke
 # Enable lingering so user services start without login
 loginctl enable-linger $USER
 
-systemctl --user enable issue-tracker-backend issue-tracker-frontend issue-tracker-mcp
+systemctl --user enable issue-tracker-pod issue-tracker-backend issue-tracker-frontend issue-tracker-mcp
+
 ```
 
 ### Check status
 
 ```bash
-systemctl --user status issue-tracker-backend issue-tracker-frontend issue-tracker-mcp
+systemctl --user status issue-tracker-pod issue-tracker-backend issue-tracker-frontend issue-tracker-mcp
+
 journalctl --user -u issue-tracker-backend -f
 ```
+
+**Note:** The Quadlet pod publishes frontend on port 8080 (not 80) for rootless compatibility. Access at http://localhost:8080. MCP remains at http://localhost:4000/mcp.
+
 
 ---
 
