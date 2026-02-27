@@ -164,8 +164,10 @@ journalctl --user -u issue-tracker-backend -f
 ## 4. OpenCode MCP Configuration
 
 Add to your OpenCode config (`opencode.json` or equivalent):
+> **Note:** This project uses a repo-local `opencode.jsonc` for the issue-tracker MCP. Add this file to your project root to enable the MCP. The MCP server is bound to localhost on the host (`127.0.0.1:4000`) by default.
 
-### Option A: Native Streamable HTTP (recommended)
+
+Add `opencode.jsonc` to your project root:
 
 ```jsonc
 {
@@ -174,6 +176,11 @@ Add to your OpenCode config (`opencode.json` or equivalent):
       "type": "remote",
       "url": "http://localhost:4000/mcp",
       "enabled": true
+    },
+    "issue-tracker-fallback": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-remote", "http://localhost:4000/mcp", "--transport", "http-only"],
+      "enabled": false
     }
   }
 }
