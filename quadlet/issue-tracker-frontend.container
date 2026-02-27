@@ -1,13 +1,16 @@
 [Unit]
 Description=Issue Tracker Frontend (nginx)
 After=issue-tracker-backend.service
+After=issue-tracker-pod.service
 Requires=issue-tracker-backend.service
+Requires=issue-tracker-pod.service
+PartOf=issue-tracker-pod.service
 
 [Container]
 ContainerName=frontend
 Image=localhost/issue-tracker-frontend:latest
-Network=issue-tracker.network
-PublishPort=80:80
+Pod=issue-tracker.pod
+AddHost=backend:127.0.0.1
 
 [Service]
 Restart=always

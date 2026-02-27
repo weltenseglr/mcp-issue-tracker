@@ -1,13 +1,16 @@
 [Unit]
 Description=Issue Tracker MCP Server (Streamable HTTP)
 After=issue-tracker-backend.service
+After=issue-tracker-pod.service
 Requires=issue-tracker-backend.service
+Requires=issue-tracker-pod.service
+PartOf=issue-tracker-pod.service
 
 [Container]
 ContainerName=mcp
 Image=localhost/issue-tracker-mcp:latest
-Network=issue-tracker.network
-PublishPort=127.0.0.1:4000:4000
+Pod=issue-tracker.pod
+AddHost=backend:127.0.0.1
 Environment=API_BASE_URL=http://backend:3000/api
 Environment=PORT=4000
 

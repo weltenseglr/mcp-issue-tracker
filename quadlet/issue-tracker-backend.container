@@ -2,12 +2,14 @@
 Description=Issue Tracker Backend
 After=network-online.target
 Wants=network-online.target
+After=issue-tracker-pod.service
+Requires=issue-tracker-pod.service
+PartOf=issue-tracker-pod.service
 
 [Container]
 ContainerName=backend
 Image=localhost/issue-tracker-backend:latest
-Network=issue-tracker.network
-PublishPort=3000:3000
+Pod=issue-tracker.pod
 Volume=issue-tracker-db.volume:/data
 Environment=DATABASE_PATH=/data/database.sqlite
 Environment=NODE_ENV=production
